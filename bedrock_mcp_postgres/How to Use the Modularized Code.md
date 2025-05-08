@@ -21,6 +21,6 @@ if __name__ == "__main__":
     
 ## Or use the CLI directly:
 
-python -m mcp_bedrock --servers server1,server2 --region us-west-2
+python3 -m bedrock_mcp_postgres --region us-west-2
 
 This modular structure separates concerns, making the code more maintainable and easier to extend. Each file has a specific responsibility, and the dependencies between components are clear.

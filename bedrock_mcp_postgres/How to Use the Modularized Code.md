@@ -21,6 +21,14 @@ if __name__ == "__main__":
     
 ## Or use the CLI directly:
 
+# You should have IAM access to bedrock models from the enviroment you are executing
+
+# Create virtual environment- Make sure you have stable python version (ex 3.12 above)
+
+python3.12 -m venv venv
+
+source venv/bin/activate
+
 python3 -m bedrock_mcp_postgres --region us-west-2
 
 This modular structure separates concerns, making the code more maintainable and easier to extend. Each file has a specific responsibility, and the dependencies between components are clear.

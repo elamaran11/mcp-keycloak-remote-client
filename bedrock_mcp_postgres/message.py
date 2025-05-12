@@ -15,7 +15,7 @@ class Message:
     def assistant(cls, text: str) -> 'Message':
         return cls(role="assistant", content=[{"text": text}])
 
-    @classmethod
+    '''@classmethod
     def tool_result(cls, tool_use_id: str, content: str) -> 'Message':
         return cls(
             role="user",
@@ -25,7 +25,23 @@ class Message:
                     "content": [{"json": {"text": content}}]
                 }
             }]
+        )'''
+    @classmethod
+    @classmethod
+    def tool_result(cls, tool_use_id: str, content: str) -> 'Message':
+        # Ensure content is properly formatted as a list of objects
+        return cls(
+            role="user",
+            content=[{
+                "toolResult": {
+                    "toolUseId": tool_use_id,
+                    "content": [{"text": content}]  # Always wrap in a list with text key
+                }
+            }]
         )
+
+
+
 
     @classmethod
     def tool_request(cls, tool_use_id: str, name: str, input_data: dict) -> 'Message':

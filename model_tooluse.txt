@@ -1,0 +1,48 @@
+AI21 Labs Jamba 1.5 Large | Yes | ai21.jamba-1.5-large | us-east-1 | 8192
+AI21 Labs Jamba 1.5 Large | Yes | ai21.jamba-1.5-large | us-west-2 | 8192
+AI21 Labs Jamba 1.5 Mini | Yes | ai21.jamba-1.5-mini | us-east-1 | 8192
+AI21 Labs Jamba 1.5 Mini | Yes | ai21.jamba-1.5-mini | us-west-2 | 8192
+Amazon Nova Pro | Yes | us.amazon.nova-pro-v1:0 | us-east-1 | 32768
+Amazon Nova Pro | Yes | us.amazon.nova-pro-v1:0 | us-west-2 | 32768
+Amazon Nova Lite | Yes | us.amazon.nova-lite-v1:0 | us-east-1 | 32768
+Amazon Nova Lite | Yes | us.amazon.nova-lite-v1:0 | us-west-2 | 32768
+Amazon Nova Micro | Yes | us.amazon.nova-micro-v1:0 | us-east-1 | 32768
+Amazon Nova Micro | Yes | us.amazon.nova-micro-v1:0 | us-west-2 | 32768
+Anthropic Claude 3 Opus models | Yes | anthropic.claude-3-opus-20240229-v1:0 | us-east-1 | 4096
+Anthropic Claude 3 Opus models | Yes | anthropic.claude-3-opus-20240229-v1:0 | us-west-2 | 4096
+Anthropic Claude 3 sonnet models | Yes | anthropic.claude-3-sonnet-20240229-v1:0 | us-east-1 | 4096
+Anthropic Claude 3 sonnet models | Yes | anthropic.claude-3-sonnet-20240229-v1:0 | us-west-2 | 4096
+Anthropic Claude 3 Haiku | Yes | anthropic.claude-3-haiku-20240307-v1:0 | us-east-1 | 4096
+Anthropic Claude 3 Haiku | Yes | anthropic.claude-3-haiku-20240307-v1:0 | us-west-2 | 4096
+Anthropic Claude 3.5 Sonnet | Yes | anthropic.claude-3-5-sonnet-20240620-v1:0 | us-east-1 | 4096
+Anthropic Claude 3.5 Sonnet | Yes | anthropic.claude-3-5-sonnet-20240620-v1:0 | us-west-2 | 4096
+Anthropic Claude 3.5 Sonnet v2 | Yes | anthropic.claude-3-5-sonnet-20241022-v2:0 | us-east-1 | 4096
+Anthropic Claude 3.5 Sonnet v2 | Yes | anthropic.claude-3-5-sonnet-20241022-v2:0 | us-west-2 | 4096
+Anthropic Claude 3.7 Sonnet | Yes | us.anthropic.claude-3-7-sonnet-20250219-v1:0 | us-east-1 | 4096
+Anthropic Claude 3.7 Sonnet | Yes | us.anthropic.claude-3-7-sonnet-20250219-v1:0 | us-west-2 | 4096
+Anthropic Claude 3.5 Haiku | Yes | anthropic.claude-3-5-haiku-20240620-v1:0 | us-east-1 | 4096
+Anthropic Claude 3.5 Haiku | Yes | anthropic.claude-3-5-haiku-20240620-v1:0 | us-west-2 | 4096
+Cohere Command R | Yes | cohere.command-r-v1:0 | us-east-1 | 4096
+Cohere Command R | Yes | cohere.command-r-v1:0 | us-west-2 | 4096
+Cohere Command R+ | Yes | cohere.command-r-plus-v1:0 | us-east-1 | 4096
+Cohere Command R+ | Yes | cohere.command-r-plus-v1:0 | us-west-2 | 4096
+Meta Llama 3.1 8B | Yes | meta.llama3-1-8b-instruct-v1:0 | us-east-1 | 4096
+Meta Llama 3.1 8B | Yes | meta.llama3-1-8b-instruct-v1:0 | us-west-2 | 4096
+Meta Llama 3.1 70B | Yes | meta.llama3-1-70b-instruct-v1:0 | us-east-1 | 4096
+Meta Llama 3.1 70B | Yes | meta.llama3-1-70b-instruct-v1:0 | us-west-2 | 4096
+Meta Llama 3.2 11b | Yes | us.meta.llama3-2-11b-instruct-v1:0 | us-east-1 | 4096
+Meta Llama 3.2 11b | Yes | us.meta.llama3-2-11b-instruct-v1:0 | us-west-2 | 4096
+Meta Llama 3.2 90b | Yes | us.meta.llama3-2-90b-instruct-v1:0 | us-east-1 | 4096
+Meta Llama 3.2 90b | Yes | us.meta.llama3-2-90b-instruct-v1:0 | us-west-2 | 4096
+Mistral Large | Yes | mistral.mistral-large-2402-v1:0 | us-east-1 | 8192
+Mistral Large | Yes | mistral.mistral-large-2402-v1:0 | us-west-2 | 8192
+Mistral Large 2 (24.07) | Yes | mistral.mistral-large-2407-v1:0 | us-east-1 | 8192
+Mistral Large 2 (24.07) | Yes | mistral.mistral-large-2407-v1:0 | us-west-2 | 8192
+Mistral Small | Yes | mistral.mistral-small-2402-v1:0 | us-east-1 | 8192
+Mistral Small | Yes | mistral.mistral-small-2402-v1:0 | us-west-2 | 8192
+Pixtral Large (25.02) | Yes | pixtral.pixtral-large-2502-v1:0 | us-east-1 | 8192
+Pixtral Large (25.02) | Yes | pixtral.pixtral-large-2502-v1:0 | us-west-2 | 8192
+Writer Palmyra X4 | Yes | writer.palmyra-x4-v1:0 | us-east-1 | 4096
+Writer Palmyra X4 | Yes | writer.palmyra-x4-v1:0 | us-west-2 | 4096
+Writer Palmyra X5 | Yes | writer.palmyra-x5-v1:0 | us-east-1 | 4096
+Writer Palmyra X5 | Yes | writer.palmyra-x5-v1:0 | us-west-2 | 4096

@@ -1,6 +1,10 @@
 # client.py
 import logging
 import os
+import time
+import threading
+import itertools
+import sys
 from typing import Dict, List, Optional, Any, Union, Tuple
 
 from .message import Message
@@ -10,6 +14,41 @@ from .config import load_mcp_config
 from .bedrock import BedrockClient
 
 logger = logging.getLogger("mcp-bedrock-client")
+
+class Spinner:
+    def __init__(self, message=''):
+        self.message = message
+        self.spinner_chars = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+        self.stop_running = False
+        self.spinner_thread = None
+
+    def spin(self):
+        write, flush = sys.stdout.write, sys.stdout.flush
+        for char in itertools.cycle(self.spinner_chars):
+            if self.stop_running:
+                break
+            write(f'\r{char} {self.message}')
+            flush()
+            time.sleep(0.1)
+        write('\r')
+        flush()
+
+    def __enter__(self):
+        self.stop_running = False
+        self.spinner_thread = threading.Thread(target=self.spin)
+        self.spinner_thread.daemon = True
+        self.spinner_thread.start()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.stop_running = True
+        if self.spinner_thread:
+            self.spinner_thread.join()
+        if exc_type is None:
+            sys.stdout.write(f'\r✓ {self.message}\n')
+        else:
+            sys.stdout.write(f'\r✗ {self.message}\n')
+        sys.stdout.flush()
 
 class GeneralMCPBedrockClient:
     """Client for MCP Servers with Bedrock Integration"""
@@ -41,19 +80,20 @@ class GeneralMCPBedrockClient:
             server_names = list(self.servers.keys())
         
         connected_servers = []
-        for name in server_names:
-            if name in self.servers:
-                success = await self.servers[name].connect()
-                if success:
-                    connected_servers.append(name)
-                    # Set the first successfully connected server as active
-                    if not self.active_server:
-                        self.active_server = name
-            else:
-                logger.warning(f"Server {name} not found in configuration")
-        
-        if not connected_servers:
-            raise RuntimeError("Failed to connect to any MCP servers")
+        with Spinner("Connecting to MCP servers..."):
+            for name in server_names:
+                if name in self.servers:
+                    success = await self.servers[name].connect()
+                    if success:
+                        connected_servers.append(name)
+                        # Set the first successfully connected server as active
+                        if not self.active_server:
+                            self.active_server = name
+                else:
+                    logger.warning(f"Server {name} not found in configuration")
+            
+            if not connected_servers:
+                raise RuntimeError("Failed to connect to any MCP servers")
         
         logger.info(f"Connected to servers: {', '.join(connected_servers)}")
         logger.info(f"Active server set to: {self.active_server}")
@@ -64,9 +104,10 @@ class GeneralMCPBedrockClient:
         """Close all connections to MCP servers"""
         logger.info("Cleaning up resources")
         
-        for server_name, server in self.servers.items():
-            if server.connected:
-                await server.disconnect()
+        with Spinner("Disconnecting from servers..."):
+            for server_name, server in self.servers.items():
+                if server.connected:
+                    await server.disconnect()
     
     async def switch_active_server(self, server_name: str):
         """Switch the active server"""
@@ -74,10 +115,24 @@ class GeneralMCPBedrockClient:
             raise ValueError(f"Server {server_name} not found")
         
         if not self.servers[server_name].connected:
-            await self.servers[server_name].connect()
+            with Spinner(f"Connecting to {server_name}..."):
+                await self.servers[server_name].connect()
         
         self.active_server = server_name
         logger.info(f"Active server switched to: {server_name}")
+    
+    '''async def call_tool(self, server_name: str, tool_name: str, params: Dict[str, Any] = None) -> str:
+        """Call a tool on a specific MCP server"""
+        if server_name not in self.servers:
+            raise ValueError(f"Server {server_name} not found")
+        
+        if not self.servers[server_name].connected:
+            with Spinner(f"Connecting to {server_name}..."):
+                await self.servers[server_name].connect()
+        
+        with Spinner(f"Calling {server_name}.{tool_name}..."):
+            result = await self.servers[server_name].call_tool(tool_name, params)
+            return result'''
     
     async def call_tool(self, server_name: str, tool_name: str, params: Dict[str, Any] = None) -> str:
         """Call a tool on a specific MCP server"""
@@ -85,9 +140,28 @@ class GeneralMCPBedrockClient:
             raise ValueError(f"Server {server_name} not found")
         
         if not self.servers[server_name].connected:
-            await self.servers[server_name].connect()
+            with Spinner(f"Connecting to {server_name}..."):
+                await self.servers[server_name].connect()
         
-        return await self.servers[server_name].call_tool(tool_name, params)
+        try:
+            with Spinner(f"Calling {server_name}.{tool_name}..."):
+                result = await self.servers[server_name].call_tool(tool_name, params)
+                return result
+        except RuntimeError as e:
+            if "Event loop is closed" in str(e):
+                # Try to create a new event loop for this operation
+                logger.warning("Event loop was closed, creating a new one")
+                new_loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(new_loop)
+                try:
+                    result = await self.servers[server_name].call_tool(tool_name, params)
+                    return result
+                finally:
+                    # Don't close the new loop as it might be needed later
+                    pass
+            else:
+                raise
+
     
     async def list_tools(self, server_name: str = None) -> List[Dict[str, Any]]:
         """List all available tools on a specific MCP server or all servers"""
@@ -96,18 +170,21 @@ class GeneralMCPBedrockClient:
                 raise ValueError(f"Server {server_name} not found")
             
             if not self.servers[server_name].connected:
-                await self.servers[server_name].connect()
+                with Spinner(f"Connecting to {server_name}..."):
+                    await self.servers[server_name].connect()
             
-            return await self.servers[server_name].list_tools()
+            with Spinner(f"Listing tools from {server_name}..."):
+                return await self.servers[server_name].list_tools()
         else:
             # List tools from all connected servers
             all_tools = []
-            for name, server in self.servers.items():
-                if server.connected:
-                    server_tools = await server.list_tools()
-                    for tool in server_tools:
-                        tool['server'] = name
-                    all_tools.extend(server_tools)
+            with Spinner("Listing tools from all servers..."):
+                for name, server in self.servers.items():
+                    if server.connected:
+                        server_tools = await server.list_tools()
+                        for tool in server_tools:
+                            tool['server'] = name
+                        all_tools.extend(server_tools)
             return all_tools
     
     def _get_all_bedrock_tools(self) -> List[Dict]:
@@ -121,7 +198,7 @@ class GeneralMCPBedrockClient:
         self.tool_mapping = tool_mapping
         return bedrock_tools
     
-    async def process_query(self, query: str) -> str:
+    '''async def process_query(self, query: str) -> str:
         """Process a user query through Bedrock and the MCP servers"""
         if not any(server.connected for server in self.servers.values()):
             raise RuntimeError("Not connected to any MCP servers")
@@ -134,9 +211,31 @@ class GeneralMCPBedrockClient:
         
         # Format tools for Bedrock from all connected servers
         bedrock_tools = self._get_all_bedrock_tools()
-        response = self.bedrock_client.make_request(messages, bedrock_tools)
+        
+        with Spinner("Processing your request..."):
+            response = self.bedrock_client.make_request(messages, bedrock_tools)
+
+        return await self._process_response(response, messages, bedrock_tools)'''
+    
+    async def process_query(self, query: str) -> str:
+        """Process a user query through Bedrock and the MCP servers"""
+        if not any(server.connected for server in self.servers.values()):
+            raise RuntimeError("Not connected to any MCP servers")
+        
+        # Add user message to memory
+        self.memory.add_user_message(query)
+        
+        # Get all messages from memory for context and validate them
+        messages = self.memory.validate_messages()
+        
+        # Format tools for Bedrock from all connected servers
+        bedrock_tools = self._get_all_bedrock_tools()
+        
+        with Spinner("Processing your request..."):
+            response = self.bedrock_client.make_request(messages, bedrock_tools)
 
         return await self._process_response(response, messages, bedrock_tools)
+
     
     async def _process_response(self, response: Dict, messages: List[Dict], bedrock_tools: List[Dict]) -> str:
         """Process the response from Bedrock, handling tool calls as needed"""
@@ -144,6 +243,9 @@ class GeneralMCPBedrockClient:
         MAX_TURNS = 10
         turn_count = 0
         final_assistant_response = ""
+        
+        # Keep track of tool use IDs to ensure we don't duplicate tool results
+        processed_tool_ids = set()
 
         while True:
             if response['stopReason'] == 'tool_use':
@@ -158,37 +260,60 @@ class GeneralMCPBedrockClient:
                         tool_args = tool_info['input']
                         tool_use_id = tool_info['toolUseId']
                         
+                        # Skip if we've already processed this tool use ID
+                        if tool_use_id in processed_tool_ids:
+                            continue
+                        
+                        # Add to processed set
+                        processed_tool_ids.add(tool_use_id)
+                        
                         # Look up the actual server and tool name from our mapping
                         if bedrock_tool_name in self.tool_mapping:
                             server_name, tool_name = self.tool_mapping[bedrock_tool_name]
                             
+                            # Add tool request to messages and memory
+                            tool_request = Message.tool_request(tool_use_id, bedrock_tool_name, tool_args).__dict__
+                            messages.append(tool_request)
+                            self.memory.add_message(tool_request)
+                            
                             # Call the actual MCP tool
                             logger.debug(f"Calling MCP tool: {server_name}.{tool_name} with args: {tool_args}")
                             try:
-                                result = await self.call_tool(server_name, tool_name, tool_args)
-                                final_text.append(f"[Using {server_name}.{tool_name} with parameters {tool_args}]")
+                                with Spinner(f"Using {server_name}.{tool_name}..."):
+                                    result = await self.call_tool(server_name, tool_name, tool_args)
+                                final_text.append(f"[Used {server_name}.{tool_name} with parameters {tool_args}]")
                                 
-                                # Add tool request and result to messages
-                                messages.append(Message.tool_request(tool_use_id, bedrock_tool_name, tool_args).__dict__)
-                                messages.append(Message.tool_result(tool_use_id, result).__dict__)
+                                # Add tool result to messages and memory
+                                tool_result = Message.tool_result(tool_use_id, result).__dict__
+                                messages.append(tool_result)
+                                self.memory.add_message(tool_result)
                                 
-                                # Add to memory
-                                self.memory.add_message(Message.tool_request(tool_use_id, bedrock_tool_name, tool_args).__dict__)
-                                self.memory.add_message(Message.tool_result(tool_use_id, result).__dict__)
                             except Exception as e:
                                 error_msg = f"Error calling tool {server_name}.{tool_name}: {str(e)}"
                                 logger.error(error_msg)
                                 final_text.append(f"[Error: {error_msg}]")
-                                messages.append(Message.tool_result(tool_use_id, f"Error: {error_msg}").__dict__)
-                                self.memory.add_message(Message.tool_result(tool_use_id, f"Error: {error_msg}").__dict__)
+                                
+                                # Create proper tool result for error
+                                tool_result = Message.tool_result(tool_use_id, f"Error: {error_msg}").__dict__
+                                messages.append(tool_result)
+                                self.memory.add_message(tool_result)
                         else:
                             error_msg = f"Unknown tool: {bedrock_tool_name}"
                             logger.error(error_msg)
                             final_text.append(f"[Error: {error_msg}]")
-                            messages.append(Message.tool_result(tool_use_id, f"Error: {error_msg}").__dict__)
-                            self.memory.add_message(Message.tool_result(tool_use_id, f"Error: {error_msg}").__dict__)
+                            
+                            # Create proper tool result for error
+                            tool_result = Message.tool_result(tool_use_id, f"Error: {error_msg}").__dict__
+                            messages.append(tool_result)
+                            self.memory.add_message(tool_result)
                         
-                        response = self.bedrock_client.make_request(messages, bedrock_tools)
+                        # Use a spinner while waiting for Bedrock's response
+                        with Spinner("Processing tool results..."):
+                            response = self.bedrock_client.make_request(messages, bedrock_tools)
+            
+            # Rest of the method remains the same...
+
+            
             elif response['stopReason'] in ('max_tokens', 'stop_sequence', 'content_filtered'):
                 reason_messages = {
                     'max_tokens': "[Max tokens reached, ending response.]",
@@ -238,7 +363,8 @@ class GeneralMCPBedrockClient:
             summary_request.extend(self.memory.get_messages())
             
             # Make the request to Bedrock
-            response = self.bedrock_client.make_request(summary_request)
+            with Spinner("Updating conversation summary..."):
+                response = self.bedrock_client.make_request(summary_request)
             
             # Extract the summary
             if response['output']['message']['content'][0]['text']:
@@ -267,7 +393,8 @@ class GeneralMCPBedrockClient:
                 elif query.lower().startswith('connect '):
                     server_name = query.split(' ', 1)[1].strip()
                     if server_name in self.servers:
-                        success = await self.servers[server_name].connect()
+                        with Spinner(f"Connecting to {server_name}..."):
+                            success = await self.servers[server_name].connect()
                         if success:
                             print(f"\nConnected to {server_name}")
                         else:
@@ -282,7 +409,8 @@ class GeneralMCPBedrockClient:
                     except Exception as e:
                         print(f"\nError: {str(e)}")
                 elif query.lower() == 'tools':
-                    tools = await self.list_tools()
+                    with Spinner("Fetching tools..."):
+                        tools = await self.list_tools()
                     print("\nAvailable tools:")
                     for tool in tools:
                         server = tool.get('server', 'unknown')
@@ -296,7 +424,8 @@ class GeneralMCPBedrockClient:
                 elif query.lower().startswith('tools '):
                     server_name = query.split(' ', 1)[1].strip()
                     try:
-                        tools = await self.list_tools(server_name)
+                        with Spinner(f"Fetching tools from {server_name}..."):
+                            tools = await self.list_tools(server_name)
                         print(f"\nTools for {server_name}:")
                         for tool in tools:
                             print(f"  {tool['name']} - {tool['description']}")

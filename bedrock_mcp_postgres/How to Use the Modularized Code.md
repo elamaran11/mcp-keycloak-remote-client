@@ -31,4 +31,4 @@ source venv/bin/activate
 
 python3 -m bedrock_mcp_postgres --region us-west-2
 
-This modular structure separates concerns, making the code more maintainable and easier to extend. Each file has a specific responsibility, and the dependencies between components are clear.
+

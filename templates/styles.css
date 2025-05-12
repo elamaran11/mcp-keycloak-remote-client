@@ -1,0 +1,36 @@
+/* styles.css */
+body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.navbar-brand {
+    font-weight: 600;
+}
+
+.card {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.card-header {
+    font-weight: 600;
+}
+
+.chat-container {
+    min-height: 300px;
+    max-height: 500px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 15px;
+    background-color: #f8f9fa;
+}
+
+.response-container {
+    white-space: pre-wrap;
+}
+
+footer {
+    margin-top: 50px;
+}

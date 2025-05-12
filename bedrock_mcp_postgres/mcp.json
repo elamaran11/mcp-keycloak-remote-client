@@ -1,0 +1,8 @@
+{
+    "mcpServers": {
+      "postgresql": {
+        "command": "npx",
+        "args": ["mcp-remote", "https://mcp-pg.agentic-ai-aws.com/sse", "--transport", "sse-only"]
+      }
+    }
+  }

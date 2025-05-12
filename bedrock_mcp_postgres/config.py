@@ -8,7 +8,7 @@ logger = logging.getLogger("mcp-bedrock-client")
 
 def load_mcp_config() -> Dict:
     """Load MCP server configurations from the config file"""
-    config_path = os.path.expanduser("~/.aws/amazonq/mcp.json")
+    config_path = os.path.expanduser("./bedrock_mcp_postgres/mcp.json")
     servers = {}
     
     # Verify config file exists

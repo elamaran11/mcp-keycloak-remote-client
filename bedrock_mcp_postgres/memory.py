@@ -48,3 +48,41 @@ class ChatMemory:
             return Message.user("Let's continue our conversation.").__dict__
         else:
             return Message.user(f"Let's continue our conversation. Here's a summary of what we've discussed so far: {self.summary}").__dict__
+    
+    def validate_messages(self) -> List[Dict]:
+        """
+        Validate the message history to ensure toolUse and toolResult are properly paired.
+        Returns a cleaned list of messages.
+        """
+        messages = list(self.messages)
+        tool_use_ids = set()
+        tool_result_ids = set()
+        
+        # First pass: collect all tool use and result IDs
+        for msg in messages:
+            if msg['role'] == 'assistant' and msg['content']:
+                for item in msg['content']:
+                    if 'toolUse' in item:
+                        tool_use_ids.add(item['toolUse']['toolUseId'])
+            
+            if msg['role'] == 'user' and msg['content']:
+                for item in msg['content']:
+                    if 'toolResult' in item:
+                        tool_result_ids.add(item['toolResult']['toolUseId'])
+        
+        # Second pass: filter out any tool results without matching tool uses
+        valid_messages = []
+        for msg in messages:
+            if msg['role'] == 'user' and msg['content']:
+                has_invalid_tool_result = False
+                for item in msg['content']:
+                    if 'toolResult' in item and item['toolResult']['toolUseId'] not in tool_use_ids:
+                        has_invalid_tool_result = True
+                        break
+                
+                if not has_invalid_tool_result:
+                    valid_messages.append(msg)
+            else:
+                valid_messages.append(msg)
+        
+        return valid_messages

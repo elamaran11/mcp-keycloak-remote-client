@@ -1,10 +1,10 @@
-# client.py
 import logging
 import os
 import time
 import threading
 import itertools
 import sys
+import asyncio
 from typing import Dict, List, Optional, Any, Union, Tuple
 
 from .message import Message
@@ -61,6 +61,10 @@ class GeneralMCPBedrockClient:
         
         # Tool name mapping (bedrock_tool_name -> (server_name, tool_name))
         self.tool_mapping: Dict[str, Tuple[str, str]] = {}
+        
+        # Tool call tracking
+        self.tool_call_timestamps = []
+        self.MAX_TOOL_CALLS_PER_MINUTE = 10
         
         # Load MCP config
         self._load_servers()
@@ -121,21 +125,27 @@ class GeneralMCPBedrockClient:
         self.active_server = server_name
         logger.info(f"Active server switched to: {server_name}")
     
-    '''async def call_tool(self, server_name: str, tool_name: str, params: Dict[str, Any] = None) -> str:
-        """Call a tool on a specific MCP server"""
-        if server_name not in self.servers:
-            raise ValueError(f"Server {server_name} not found")
-        
-        if not self.servers[server_name].connected:
-            with Spinner(f"Connecting to {server_name}..."):
-                await self.servers[server_name].connect()
-        
-        with Spinner(f"Calling {server_name}.{tool_name}..."):
-            result = await self.servers[server_name].call_tool(tool_name, params)
-            return result'''
-    
     async def call_tool(self, server_name: str, tool_name: str, params: Dict[str, Any] = None) -> str:
-        """Call a tool on a specific MCP server"""
+        """Call a tool on a specific MCP server with rate limiting"""
+        # Implement rate limiting for tool calls
+        current_time = time.time()
+        # Remove timestamps older than 60 seconds
+        self.tool_call_timestamps = [t for t in self.tool_call_timestamps if current_time - t < 60]
+        
+        # Check if we're exceeding rate limits
+        if len(self.tool_call_timestamps) >= self.MAX_TOOL_CALLS_PER_MINUTE:
+            # Calculate time to wait
+            oldest_timestamp = min(self.tool_call_timestamps)
+            wait_time = 60 - (current_time - oldest_timestamp) + 1  # Add 1 second buffer
+            logger.warning(f"Rate limiting tool calls. Waiting {wait_time:.2f} seconds")
+            await asyncio.sleep(wait_time)
+            # Recalculate after waiting
+            current_time = time.time()
+            self.tool_call_timestamps = [t for t in self.tool_call_timestamps if current_time - t < 60]
+        
+        # Add current timestamp to the list
+        self.tool_call_timestamps.append(current_time)
+        
         if server_name not in self.servers:
             raise ValueError(f"Server {server_name} not found")
         
@@ -161,7 +171,6 @@ class GeneralMCPBedrockClient:
                     pass
             else:
                 raise
-
     
     async def list_tools(self, server_name: str = None) -> List[Dict[str, Any]]:
         """List all available tools on a specific MCP server or all servers"""
@@ -198,25 +207,6 @@ class GeneralMCPBedrockClient:
         self.tool_mapping = tool_mapping
         return bedrock_tools
     
-    '''async def process_query(self, query: str) -> str:
-        """Process a user query through Bedrock and the MCP servers"""
-        if not any(server.connected for server in self.servers.values()):
-            raise RuntimeError("Not connected to any MCP servers")
-        
-        # Add user message to memory
-        self.memory.add_user_message(query)
-        
-        # Get all messages from memory for context
-        messages = self.memory.get_messages()
-        
-        # Format tools for Bedrock from all connected servers
-        bedrock_tools = self._get_all_bedrock_tools()
-        
-        with Spinner("Processing your request..."):
-            response = self.bedrock_client.make_request(messages, bedrock_tools)
-
-        return await self._process_response(response, messages, bedrock_tools)'''
-    
     async def process_query(self, query: str) -> str:
         """Process a user query through Bedrock and the MCP servers"""
         if not any(server.connected for server in self.servers.values()):
@@ -235,7 +225,6 @@ class GeneralMCPBedrockClient:
             response = self.bedrock_client.make_request(messages, bedrock_tools)
 
         return await self._process_response(response, messages, bedrock_tools)
-
     
     async def _process_response(self, response: Dict, messages: List[Dict], bedrock_tools: List[Dict]) -> str:
         """Process the response from Bedrock, handling tool calls as needed"""
@@ -246,6 +235,9 @@ class GeneralMCPBedrockClient:
         
         # Keep track of tool use IDs to ensure we don't duplicate tool results
         processed_tool_ids = set()
+        
+        # Collect tool calls for potential batching
+        pending_tool_calls = []
 
         while True:
             if response['stopReason'] == 'tool_use':
@@ -276,27 +268,8 @@ class GeneralMCPBedrockClient:
                             messages.append(tool_request)
                             self.memory.add_message(tool_request)
                             
-                            # Call the actual MCP tool
-                            logger.debug(f"Calling MCP tool: {server_name}.{tool_name} with args: {tool_args}")
-                            try:
-                                with Spinner(f"Using {server_name}.{tool_name}..."):
-                                    result = await self.call_tool(server_name, tool_name, tool_args)
-                                final_text.append(f"[Used {server_name}.{tool_name} with parameters {tool_args}]")
-                                
-                                # Add tool result to messages and memory
-                                tool_result = Message.tool_result(tool_use_id, result).__dict__
-                                messages.append(tool_result)
-                                self.memory.add_message(tool_result)
-                                
-                            except Exception as e:
-                                error_msg = f"Error calling tool {server_name}.{tool_name}: {str(e)}"
-                                logger.error(error_msg)
-                                final_text.append(f"[Error: {error_msg}]")
-                                
-                                # Create proper tool result for error
-                                tool_result = Message.tool_result(tool_use_id, f"Error: {error_msg}").__dict__
-                                messages.append(tool_result)
-                                self.memory.add_message(tool_result)
+                            # Add to pending tool calls
+                            pending_tool_calls.append((tool_use_id, server_name, tool_name, tool_args))
                         else:
                             error_msg = f"Unknown tool: {bedrock_tool_name}"
                             logger.error(error_msg)
@@ -306,13 +279,41 @@ class GeneralMCPBedrockClient:
                             tool_result = Message.tool_result(tool_use_id, f"Error: {error_msg}").__dict__
                             messages.append(tool_result)
                             self.memory.add_message(tool_result)
-                        
-                        # Use a spinner while waiting for Bedrock's response
-                        with Spinner("Processing tool results..."):
-                            response = self.bedrock_client.make_request(messages, bedrock_tools)
-            
-            # Rest of the method remains the same...
-
+                
+                # Process tool calls (with potential batching for efficiency)
+                if pending_tool_calls:
+                    # For now, process sequentially with rate limiting built into call_tool
+                    for tool_use_id, server_name, tool_name, tool_args in pending_tool_calls:
+                        logger.debug(f"Calling MCP tool: {server_name}.{tool_name} with args: {tool_args}")
+                        try:
+                            with Spinner(f"Using {server_name}.{tool_name}..."):
+                                result = await self.call_tool(server_name, tool_name, tool_args)
+                            final_text.append(f"[Used {server_name}.{tool_name} with parameters {tool_args}]")
+                            
+                            # Add tool result to messages and memory
+                            tool_result = Message.tool_result(tool_use_id, result).__dict__
+                            messages.append(tool_result)
+                            self.memory.add_message(tool_result)
+                            
+                        except Exception as e:
+                            error_msg = f"Error calling tool {server_name}.{tool_name}: {str(e)}"
+                            logger.error(error_msg)
+                            final_text.append(f"[Error: {error_msg}]")
+                            
+                            # Create proper tool result for error
+                            tool_result = Message.tool_result(tool_use_id, f"Error: {error_msg}").__dict__
+                            messages.append(tool_result)
+                            self.memory.add_message(tool_result)
+                    
+                    # Clear pending tool calls
+                    pending_tool_calls = []
+                
+                # Use a spinner while waiting for Bedrock's response
+                with Spinner("Processing tool results..."):
+                    # Add a small delay before making the next request to avoid throttling
+                    if self.bedrock_client.is_nova_model():
+                        await asyncio.sleep(1.0)  # Longer delay for Nova models
+                    response = self.bedrock_client.make_request(messages, bedrock_tools)
             
             elif response['stopReason'] in ('max_tokens', 'stop_sequence', 'content_filtered'):
                 reason_messages = {
@@ -364,6 +365,9 @@ class GeneralMCPBedrockClient:
             
             # Make the request to Bedrock
             with Spinner("Updating conversation summary..."):
+                # Add a small delay before making this request to avoid throttling
+                if self.bedrock_client.is_nova_model():
+                    await asyncio.sleep(1.0)
                 response = self.bedrock_client.make_request(summary_request)
             
             # Extract the summary

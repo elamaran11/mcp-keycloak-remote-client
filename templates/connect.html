@@ -21,6 +21,15 @@
         .footer {
             margin-top: 50px;
         }
+        .error-message {
+            color: #dc3545;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+            background-color: #f8d7da;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -38,8 +47,11 @@
                         <h2 class="mb-0">Connect to MCP Servers</h2>
                     </div>
                     <div class="card-body">
-                        <!-- Updated to use the correct /web/connect route -->
-                        <form action="/web/connect" method="post">
+                        <!-- Error message container -->
+                        <div id="errorMessage" class="error-message"></div>
+                        
+                        <!-- Changed to use JavaScript for form submission -->
+                        <form id="connectForm" action="/web/connect" method="post">
                             <div class="mb-4">
                                 <label for="model_id" class="form-label fw-bold">Model:</label>
                                 <select id="model_id" name="model_id" class="form-select">
@@ -78,7 +90,7 @@
                             </div>
                             
                             <div class="d-grid gap-2">
-                                <button type="submit" class="btn btn-primary">Connect</button>
+                                <button type="submit" class="btn btn-primary" id="connectButton">Connect</button>
                                 <a href="/" class="btn btn-outline-secondary">Back to Home</a>
                             </div>
                         </form>
@@ -90,24 +102,64 @@
 
     <footer class="footer py-3 bg-light">
         <div class="container text-center">
-            <span class="text-muted">© 2023 MCP Bedrock Client</span>
+            <span class="text-muted">© 2025 MCP Bedrock Client</span>
         </div>
     </footer>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Add functionality for select/deselect all buttons
-        document.getElementById('selectAllServers').addEventListener('click', function() {
-            const options = document.getElementById('servers').options;
-            for (let i = 0; i < options.length; i++) {
-                options[i].selected = true;
+        document.addEventListener('DOMContentLoaded', function() {
+            // Select the first server by default if none are selected
+            const serversSelect = document.getElementById('servers');
+            if (serversSelect.selectedOptions.length === 0 && serversSelect.options.length > 0) {
+                serversSelect.options[0].selected = true;
             }
-        });
-        
-        document.getElementById('deselectAllServers').addEventListener('click', function() {
-            const options = document.getElementById('servers').options;
-            for (let i = 0; i < options.length; i++) {
-                options[i].selected = false;
+            
+            // Add functionality for select/deselect all buttons
+            document.getElementById('selectAllServers').addEventListener('click', function() {
+                const options = document.getElementById('servers').options;
+                for (let i = 0; i < options.length; i++) {
+                    options[i].selected = true;
+                }
+            });
+            
+            document.getElementById('deselectAllServers').addEventListener('click', function() {
+                const options = document.getElementById('servers').options;
+                for (let i = 0; i < options.length; i++) {
+                    options[i].selected = false;
+                }
+            });
+            
+            // Handle form submission with validation
+            document.getElementById('connectForm').addEventListener('submit', function(event) {
+                event.preventDefault();
+                
+                const errorMessageElement = document.getElementById('errorMessage');
+                errorMessageElement.style.display = 'none';
+                
+                // Validate server selection
+                const selectedServers = Array.from(serversSelect.selectedOptions).map(option => option.value);
+                
+                if (selectedServers.length === 0) {
+                    showError('Please select at least one server to connect.');
+                    return;
+                }
+                
+                // If validation passes, submit the form
+                try {
+                    this.submit();
+                } catch (error) {
+                    showError('An error occurred while connecting: ' + error.message);
+                }
+            });
+            
+            function showError(message) {
+                const errorMessageElement = document.getElementById('errorMessage');
+                errorMessageElement.textContent = message;
+                errorMessageElement.style.display = 'block';
+                
+                // Scroll to the error message
+                errorMessageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         });
     </script>

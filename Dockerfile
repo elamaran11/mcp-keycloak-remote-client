@@ -9,6 +9,7 @@ ENV PYTHONUNBUFFERED=1 \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     gcc \
+    curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -16,13 +17,20 @@ WORKDIR /app
 
 # Copy requirements first for better caching
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir mcp
 
 # Copy application code
 COPY . .
 
+# Create non-root user and set permissions
 RUN useradd -m -r mcpclient && \
-    chown -R mcpclient:mcpclient /app
+    chown -R mcpclient:mcpclient /app && \
+    # Create directory for any writable files
+    mkdir -p /app/data && \
+    chown -R mcpclient:mcpclient /app/data && \
+    chmod -R 770 /app/data
+
 USER mcpclient
 
 # Expose the port the app runs on

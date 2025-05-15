@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgresql-clientsec-deployment
+  namespace: default
+  labels:
+    app: postgresql-clientsec
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgresql-clientsec
+  template:
+    metadata:
+      labels:
+        app: postgresql-clientsec
+    spec:
+      serviceAccountName: bedrock-access-service-account
+      containers:
+        - name: postgresql-clientsec
+          image: 940019131157.dkr.ecr.us-west-2.amazonaws.com/mcp-remote-client:latest
+          ports:
+            - containerPort: 4001
+          env:
+            - name: KEYCLOAK_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: api-secrets
+                  key: KEYCLOAK_CLIENT_ID
+            - name: KEYCLOAK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: api-secrets
+                  key: KEYCLOAK_CLIENT_SECRET
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bedrock-access-service-account
+  namespace: default

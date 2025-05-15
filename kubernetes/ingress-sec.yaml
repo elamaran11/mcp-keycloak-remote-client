@@ -1,17 +1,17 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: postgresql-client-ingress
+  name: postgresql-clientsec-ingress
   namespace: default
 spec:
   ingressClassName: nginx
   rules:
-    - host: psqlrmc.elamaras.people.aws.dev  # Adjust the hostname as needed
+    - host: aiagent.elamaras.people.aws.dev  # Adjust the hostname as needed
       http:
         paths:
           - backend:
               service:
-                name: postgresql-client-service
+                name: postgresql-clientsec-service
                 port:
                   number: 80
             path: /

@@ -18,7 +18,7 @@ spec:
       serviceAccountName: bedrock-access-service-account
       containers:
         - name: postgresql-clientsec
-          image: 940019131157.dkr.ecr.us-west-2.amazonaws.com/mcp-remote-client:latest
+          image: 940019131157.dkr.ecr.us-west-2.amazonaws.com/mcp-remote-client:secured
           ports:
             - containerPort: 4001
           env:

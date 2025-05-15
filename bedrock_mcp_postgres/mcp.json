@@ -1,8 +1,12 @@
 {
-    "mcpServers": {
-      "postgresql": {
-        "command": "npx",
-        "args": ["mcp-remote", "https://mcp-pg.agentic-ai-aws.com/sse", "--transport", "sse-only"]
-      }
+  "mcpServers": {
+    "postgresql": {
+      "command": "npx",
+      "args": ["mcp-remote", "http://postgresql-analyzer-service.default.svc.cluster.local/sse", "--transport", "sse"]
+    },
+    "mysql": {
+      "command": "npx",
+      "args": ["mcp-remote", "http://mysql-analyzer-service.default.svc.cluster.local/sse", "--transport", "sse"]
     }
   }
+}

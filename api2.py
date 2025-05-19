@@ -25,7 +25,7 @@ logger = logging.getLogger("mcp-bedrock-client-api")
 KEYCLOAK_URL = "https://auth.elamaras.people.aws.dev"
 REALM_NAME = "fastapi-realm"
 KEYCLOAK_CLIENT_ID = "fastapi-client"
-KEYCLOAK_CLIENT_SECRET = "p6LQAgScIDltviUCmnvX3Wauggl1lF1z"  # Replace with your actual client secret
+KEYCLOAK_CLIENT_SECRET = "XXXX"  # Replace with your actual client secret
 REDIRECT_URL = "http://aiagent.elamaras.people.aws.dev/callback"
 JWKS_URL = f"{KEYCLOAK_URL}/realms/{REALM_NAME}/protocol/openid-connect/certs"
 
